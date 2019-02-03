@@ -1,0 +1,29 @@
+#!/bin/sh /etc/rc.common
+
+START=98
+USE_PROCD=1
+
+start_service(){
+
+	if [ ! -f /etc/cifs/smb.conf ]; then
+		logger -t 'cifsd' "missing config /etc/cifs/smb.conf, needs to-be created manually!"
+		exit 1
+	fi
+
+	[ -f /tmp/cifsd.lock ] && rm /tmp/cifsd.lock
+	
+	# try remove again before start
+	if (lsmod | grep cifsd &>/dev/null); then
+		rmmod cifsd &>/dev/null
+	fi
+	modprobe cifsd 2>/dev/null
+	if !(lsmod | grep cifsd &>/dev/null); then
+		logger -t 'cifsd' "modprobe of cifsd module failed, cant start cifsd!"
+		exit 1
+	fi
+
+	logger -t 'cifsd' "Starting CIFS/SMB userspace service."
+	procd_open_instance
+	procd_set_param command /usr/sbin/cifsd --n
+	procd_close_instance
+}
